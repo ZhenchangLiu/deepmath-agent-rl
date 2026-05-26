@@ -1,0 +1,24 @@
+.DS_Store
+
+# Python caches and local virtual environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Local editor settings
+.vscode/
+
+# Generated experiment outputs and traces
+outputs/
+outputs_inference/
+traces*.jsonl
+*_trace.jsonl
+*_traces.jsonl
+
+# Local secrets
+.env
+.env.*
