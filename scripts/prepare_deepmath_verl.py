@@ -36,6 +36,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=20260526)
     parser.add_argument("--instruction", default=DEFAULT_INSTRUCTION)
     parser.add_argument(
+        "--on-missing",
+        choices=["skip", "error"],
+        default="skip",
+        help="How to handle records missing a question or final answer.",
+    )
+    parser.add_argument(
+        "--include-solutions",
+        action="store_true",
+        help="Keep r1_solution_* fields in extra_info. Off by default to keep VeRL parquet compact.",
+    )
+    parser.add_argument(
         "--no-shuffle",
         action="store_true",
         help="Keep dataset order before train/val split. By default records are shuffled.",
@@ -111,7 +122,13 @@ def build_question(question: str, instruction: str) -> str:
     return f"{question}\n\n{instruction}"
 
 
-def normalize_record(record: dict[str, Any], index: int, instruction: str, data_source: str) -> dict[str, Any]:
+def normalize_record(
+    record: dict[str, Any],
+    index: int,
+    instruction: str,
+    data_source: str,
+    include_solutions: bool,
+) -> dict[str, Any]:
     question = first_present(record, ("question", "problem", "prompt"))
     answer = first_present(record, ("final_answer", "answer", "target", "ground_truth"))
     if question is None:
@@ -132,9 +149,10 @@ def normalize_record(record: dict[str, Any], index: int, instruction: str, data_
     if topic is not None:
         extra_info["topic"] = topic
 
-    for key in ("r1_solution_1", "r1_solution_2", "r1_solution_3", "r1_solution_4"):
-        if key in record and record[key] is not None:
-            extra_info[key] = record[key]
+    if include_solutions:
+        for key in ("r1_solution_1", "r1_solution_2", "r1_solution_3", "r1_solution_4"):
+            if key in record and record[key] is not None:
+                extra_info[key] = record[key]
 
     return {
         "data_source": data_source,
@@ -151,6 +169,45 @@ def normalize_record(record: dict[str, Any], index: int, instruction: str, data_
         },
         "extra_info": extra_info,
     }
+
+
+def normalize_records(
+    raw_records: Iterable[dict[str, Any]],
+    instruction: str,
+    data_source: str,
+    on_missing: str,
+    include_solutions: bool,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    records = []
+    skipped = []
+    for index, record in enumerate(raw_records):
+        try:
+            records.append(
+                normalize_record(
+                    record,
+                    index=index,
+                    instruction=instruction,
+                    data_source=data_source,
+                    include_solutions=include_solutions,
+                )
+            )
+        except ValueError as exc:
+            if on_missing == "error":
+                raise
+            skipped.append(
+                {
+                    "index": index,
+                    "reason": str(exc),
+                    "keys": sorted(record.keys()),
+                    "question_present": first_present(record, ("question", "problem", "prompt")) is not None,
+                    "answer_present": first_present(
+                        record,
+                        ("final_answer", "answer", "target", "ground_truth"),
+                    )
+                    is not None,
+                }
+            )
+    return records, skipped
 
 
 def split_records(
@@ -186,10 +243,16 @@ def main() -> None:
     if args.limit is not None:
         raw_records = raw_records[: args.limit]
 
-    records = [
-        normalize_record(record, index=index, instruction=args.instruction, data_source=args.dataset)
-        for index, record in enumerate(raw_records)
-    ]
+    records, skipped_records = normalize_records(
+        raw_records,
+        instruction=args.instruction,
+        data_source=args.dataset,
+        on_missing=args.on_missing,
+        include_solutions=args.include_solutions,
+    )
+    if not records:
+        raise ValueError("no usable records after filtering missing question/answer rows")
+
     train_records, val_records = split_records(
         records,
         val_size=args.val_size,
@@ -212,6 +275,9 @@ def main() -> None:
         "val_path": str(val_path),
         "train_count": len(train_records),
         "val_count": len(val_records),
+        "skipped_count": len(skipped_records),
+        "skipped_examples": skipped_records[:5],
+        "include_solutions": args.include_solutions,
         "instruction": args.instruction,
     }
     print(json.dumps(summary, ensure_ascii=False, indent=2))
