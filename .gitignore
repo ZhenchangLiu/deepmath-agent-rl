@@ -13,6 +13,8 @@ venv/
 .vscode/
 
 # Generated experiment outputs and traces
+checkpoints/
+data_verl/
 outputs/
 outputs_inference/
 traces*.jsonl
