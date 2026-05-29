@@ -8,9 +8,10 @@ from deepmath_lite.agent_loop_core import (
 
 
 class ScriptedModel:
-    def __init__(self, outputs):
+    def __init__(self, outputs, finish_reason="stop"):
         self.outputs = list(outputs)
         self.prompts = []
+        self.last_metadata = {"finish_reason": finish_reason}
 
     def generate(self, prompt: str) -> str:
         self.prompts.append(prompt)
@@ -78,6 +79,43 @@ class AgentLoopCoreTests(unittest.TestCase):
         self.assertEqual(rollout.stopped_reason, "protocol_violation_code_and_answer")
         self.assertIsNone(rollout.final_answer)
         self.assertEqual([span.role for span in rollout.spans], [ASSISTANT_ROLE])
+
+    def test_rejects_fabricated_observation(self):
+        model = ScriptedModel(["<observation>\n999\n</observation>\n\\boxed{999}"])
+        rollout = AgentLoopCore(model=model).run("What is 2+3?")
+
+        self.assertEqual(rollout.stopped_reason, "protocol_violation_fabricated_observation")
+        self.assertIsNone(rollout.final_answer)
+        self.assertEqual([span.role for span in rollout.spans], [ASSISTANT_ROLE])
+
+    def test_rejects_markdown_code_block_before_answer(self):
+        model = ScriptedModel(["```python\nprint(2 + 3)\n```\n\\boxed{5}"])
+        rollout = AgentLoopCore(model=model).run("What is 2+3?")
+
+        self.assertEqual(rollout.stopped_reason, "protocol_violation_markdown_code_block")
+        self.assertIsNone(rollout.final_answer)
+        self.assertEqual([span.role for span in rollout.spans], [ASSISTANT_ROLE])
+
+    def test_marks_truncated_generation_from_model_metadata(self):
+        model = ScriptedModel(["We need to keep solving"], finish_reason="length")
+        rollout = AgentLoopCore(model=model).run("What is 2+3?")
+
+        self.assertEqual(rollout.stopped_reason, "truncated_generation")
+        self.assertIsNone(rollout.final_answer)
+
+    def test_marks_malformed_code_block(self):
+        model = ScriptedModel(["<python>\nprint(2 + 3)"])
+        rollout = AgentLoopCore(model=model).run("What is 2+3?")
+
+        self.assertEqual(rollout.stopped_reason, "malformed_code_block")
+        self.assertIsNone(rollout.final_answer)
+
+    def test_marks_malformed_boxed_answer(self):
+        model = ScriptedModel(["\\boxed{\\frac{1}{2}"])
+        rollout = AgentLoopCore(model=model).run("What is 1/2?")
+
+        self.assertEqual(rollout.stopped_reason, "malformed_boxed_answer")
+        self.assertIsNone(rollout.final_answer)
 
 
 if __name__ == "__main__":

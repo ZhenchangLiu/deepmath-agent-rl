@@ -10,7 +10,15 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 from .executor import ExecutionResult, run_python
-from .protocol import build_prompt, extract_boxed_answer, find_first_code_block, make_observation
+from .protocol import (
+    build_prompt,
+    extract_boxed_answer,
+    find_first_code_block,
+    has_malformed_boxed_answer,
+    has_malformed_code_block,
+    has_markdown_code_block,
+    make_observation,
+)
 
 
 ASSISTANT_ROLE = "assistant"
@@ -93,6 +101,7 @@ class AgentLoopCore:
         for _ in range(self.max_steps):
             prompt = build_prompt(question, history)
             model_output = self.model.generate(prompt)
+            model_metadata = getattr(self.model, "last_metadata", None)
             rollout.spans.append(RolloutSpan(role=ASSISTANT_ROLE, text=model_output))
 
             block = find_first_code_block(model_output)
@@ -100,9 +109,19 @@ class AgentLoopCore:
             step = RolloutStep(prompt=prompt, model_output=model_output)
             rollout.steps.append(step)
 
+            if "<observation>" in model_output:
+                rollout.final_answer = None
+                rollout.stopped_reason = "protocol_violation_fabricated_observation"
+                return rollout
+
             if block is not None and answer is not None:
                 rollout.final_answer = None
                 rollout.stopped_reason = "protocol_violation_code_and_answer"
+                return rollout
+
+            if has_markdown_code_block(model_output):
+                rollout.final_answer = None
+                rollout.stopped_reason = "protocol_violation_markdown_code_block"
                 return rollout
 
             if block is not None:
@@ -120,6 +139,21 @@ class AgentLoopCore:
             if answer is not None:
                 rollout.final_answer = answer
                 rollout.stopped_reason = "boxed_answer"
+                return rollout
+
+            if isinstance(model_metadata, dict) and model_metadata.get("finish_reason") == "length":
+                rollout.final_answer = None
+                rollout.stopped_reason = "truncated_generation"
+                return rollout
+
+            if has_malformed_code_block(model_output):
+                rollout.final_answer = None
+                rollout.stopped_reason = "malformed_code_block"
+                return rollout
+
+            if has_malformed_boxed_answer(model_output):
+                rollout.final_answer = None
+                rollout.stopped_reason = "malformed_boxed_answer"
                 return rollout
 
             rollout.final_answer = None
