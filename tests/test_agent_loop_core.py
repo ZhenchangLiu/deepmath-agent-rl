@@ -1,6 +1,6 @@
 import unittest
 
-from deepmath_lite.agent_loop_core import (
+from deepmath_lite.verl_agent_loop_core import (
     ASSISTANT_ROLE,
     OBSERVATION_ROLE,
     AgentLoopCore,
