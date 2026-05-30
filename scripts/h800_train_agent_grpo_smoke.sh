@@ -42,6 +42,33 @@ export RAY_DEDUP_LOGS="${RAY_DEDUP_LOGS:-0}"
 export VLLM_USE_V1="${VLLM_USE_V1:-1}"
 export VLLM_LOGGING_LEVEL="${VLLM_LOGGING_LEVEL}"
 
+python - <<'PY'
+from __future__ import annotations
+
+from importlib.metadata import version
+
+
+def parse_major_minor(value: str) -> tuple[int, int]:
+    major, minor, *_ = value.split(".")
+    return int(major), int(minor)
+
+
+numpy_version = version("numpy")
+try:
+    numba_version = version("numba")
+except Exception as exc:
+    raise SystemExit(f"numba is required by vLLM V1 but is not importable: {exc}") from exc
+
+if parse_major_minor(numpy_version) >= (2, 3):
+    raise SystemExit(
+        "Incompatible NumPy/Numba versions for vLLM V1: "
+        f"numpy=={numpy_version}, numba=={numba_version}. "
+        'Install a compatible NumPy, e.g. `python -m pip install "numpy<2.3"`.'
+    )
+
+print(f"dependency preflight ok: numpy=={numpy_version}, numba=={numba_version}")
+PY
+
 python scripts/prepare_deepmath_verl.py \
     --limit 32 \
     --val-size 4 \

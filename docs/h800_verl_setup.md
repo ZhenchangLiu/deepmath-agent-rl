@@ -131,6 +131,14 @@ The first real training smoke is:
 bash scripts/h800_train_agent_grpo_smoke.sh
 ```
 
+The smoke script preflights the vLLM V1 NumPy/Numba compatibility before
+starting Ray. If it reports `Numba needs NumPy 2.2 or less`, fix the dedicated
+H800 environment:
+
+```bash
+python -m pip install "numpy<2.3"
+```
+
 By default this uses:
 
 ```text
