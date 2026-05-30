@@ -1,0 +1,4 @@
+- name: deepmath_lite
+  _target_: deepmath_lite.verl_agent_loop.DeepMathLiteAgentLoop
+  max_steps: 5
+  timeout_s: 2.0

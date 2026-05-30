@@ -118,24 +118,39 @@ python -c "import torch; print(torch.cuda.is_available(), torch.cuda.device_coun
 
 ## Next Implementation Step On H800
 
-The current placeholder is:
+The VeRL server-manager adapter is now wired through:
 
 ```text
-deepmath_lite.verl_agent_loop.VeRLServerModelRunner.generate
+deepmath_lite.verl_agent_loop.DeepMathLiteAgentLoop
+configs/verl/deepmath_lite_agent_loop.yaml
 ```
 
-It must be replaced by a real VeRL rollout call against:
+The first real training smoke is:
 
-```python
-await self.server_manager.generate(
-    request_id=...,
-    prompt_ids=...,
-    sampling_params=...,
-)
+```bash
+bash scripts/h800_train_agent_grpo_smoke.sh
 ```
 
-This should be implemented on H800 because it needs the real VeRL server manager
-and tokenizer behavior.
+By default this uses:
+
+```text
+model: /mmu_nlp_hdd/dujiazhen03/model/Qwen2.5-1.5B-Instruct
+trainer: verl.trainer.main_ppo
+rollout: vLLM async AgentLoop
+data: 32 DeepMath-103K samples, 4 validation samples
+steps: 1 optimizer step
+gpus: 1
+```
+
+To switch the same path to 7B later:
+
+```bash
+MODEL_PATH=/mmu_nlp_hdd/dujiazhen03/model/Qwen2.5-7B-Instruct \
+NGPUS_PER_NODE=8 \
+ROLLOUT_TP=2 \
+ROLLOUT_GPU_MEM_UTIL=0.6 \
+bash scripts/h800_train_agent_grpo_smoke.sh
+```
 
 ## First Training Smoke Target
 

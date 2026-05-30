@@ -126,6 +126,43 @@ class VeRLServerModelRunner(AsyncTextModelRunner):
         return self.tokenizer.decode(token_ids)
 
 
+class DeepMathLiteAgentLoop:
+    """Hydra-loadable VeRL AgentLoop implementation for DeepMath Lite."""
+
+    def __init__(
+        self,
+        trainer_config: Any,
+        server_manager: Any,
+        tokenizer: Any,
+        processor: Any = None,
+        dataset_cls: Any = None,
+        data_config: Any = None,
+        max_steps: int = 5,
+        timeout_s: float = 2.0,
+        **_: Any,
+    ):
+        self.trainer_config = trainer_config
+        self.server_manager = server_manager
+        self.tokenizer = tokenizer
+        self.processor = processor
+        self.dataset_cls = dataset_cls
+        self.data_config = data_config
+        self.max_steps = max_steps
+        self.timeout_s = timeout_s
+
+    async def run(self, sampling_params: dict[str, Any], **kwargs: Any) -> Any:
+        question = extract_question(kwargs)
+        tokenizer = VeRLPromptTokenizer(self.tokenizer)
+        model = VeRLServerModelRunner(self.server_manager, tokenizer, sampling_params)
+        rollout = await AsyncAgentLoopCore(
+            model=model,
+            max_steps=self.max_steps,
+            timeout_s=self.timeout_s,
+        ).run(question)
+        payload = build_output_payload(question, rollout, tokenizer)
+        return to_verl_output(payload)
+
+
 def build_deepmath_agent_loop_class() -> type:
     """Build a VeRL AgentLoop subclass when VeRL is available."""
 
@@ -146,6 +183,14 @@ def build_deepmath_agent_loop_class() -> type:
 
 def extract_question(dataset_fields: dict[str, Any]) -> str:
     """Extract a plain question from common VeRL dataset field shapes."""
+
+    raw_prompt = dataset_fields.get("raw_prompt")
+    if isinstance(raw_prompt, str):
+        return raw_prompt
+    if isinstance(raw_prompt, list) and raw_prompt:
+        last = raw_prompt[-1]
+        if isinstance(last, dict) and "content" in last:
+            return str(last["content"])
 
     prompt = dataset_fields.get("prompt")
     if isinstance(prompt, str):
