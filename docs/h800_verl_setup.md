@@ -152,6 +152,21 @@ vllm: V1 engine, eager mode, small context/concurrency
 agent loop workers: 1
 ```
 
+Checkpoint output is written under:
+
+```text
+checkpoints/${PROJECT_NAME}/${EXPERIMENT_NAME}
+```
+
+With the smoke defaults this is:
+
+```text
+checkpoints/deepmath_lite/agent_grpo_smoke_qwen25_1p5b
+```
+
+Console metrics are visible in stdout; when launching with `tee`, they are also
+in the tee log, e.g. `/tmp/deepmath_smoke.log`.
+
 The script appends `VLLM_USE_V1` and `VLLM_LOGGING_LEVEL` through
 `+ray_kwargs.ray_init.runtime_env.env_vars`, because VeRL creates vLLM inside
 Ray actors and plain shell exports may not be visible in the server actor. The
@@ -183,6 +198,49 @@ ROLLOUT_LOAD_FORMAT=auto bash scripts/h800_train_agent_grpo_smoke.sh
 ROLLOUT_GPU_MEM_UTIL=0.5 bash scripts/h800_train_agent_grpo_smoke.sh
 AGENT_LOOP_WORKERS=4 TRAIN_BATCH_SIZE=4 ROLLOUT_N=2 bash scripts/h800_train_agent_grpo_smoke.sh
 CUDA_VISIBLE_DEVICES=0 bash scripts/h800_train_agent_grpo_smoke.sh
+```
+
+## WandB And Larger Probe
+
+Login once on H800:
+
+```bash
+wandb login
+```
+
+Then run the 1.5B probe:
+
+```bash
+bash scripts/h800_train_agent_grpo_probe_1p5b.sh 2>&1 | tee /tmp/deepmath_probe_1p5b.log
+```
+
+The probe keeps the same VeRL AgentLoop path but increases the run from a
+single smoke step to:
+
+```text
+data: 256 train samples, 16 validation samples
+steps: 5
+train batch size: 4
+rollout n: 2
+max response length: 1024
+logger: ["console","wandb"]
+checkpoint: checkpoints/deepmath_lite/agent_grpo_probe5_qwen25_1p5b
+```
+
+For a no-wandb dry run:
+
+```bash
+TRAINER_LOGGER='["console"]' bash scripts/h800_train_agent_grpo_probe_1p5b.sh
+```
+
+Track these metrics first:
+
+```text
+critic/rewards/mean
+timing_s/agent_loop/tool_calls/mean
+response_length/clip_ratio
+actor/loss
+actor/grad_norm
 ```
 
 ## First Training Smoke Target

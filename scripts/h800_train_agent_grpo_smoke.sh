@@ -8,6 +8,8 @@ MODEL_PATH=${MODEL_PATH:-/mmu_nlp_hdd/dujiazhen03/model/Qwen2.5-1.5B-Instruct}
 TRAIN_FILE=${TRAIN_FILE:-/tmp/deepmath_verl_smoke_data/train.parquet}
 VAL_FILE=${VAL_FILE:-/tmp/deepmath_verl_smoke_data/val.parquet}
 DATA_DIR=${DATA_DIR:-/tmp/deepmath_verl_smoke_data}
+DATA_LIMIT=${DATA_LIMIT:-32}
+VAL_SIZE=${VAL_SIZE:-4}
 AGENT_LOOP_CONFIG=${AGENT_LOOP_CONFIG:-${ROOT_DIR}/configs/verl/deepmath_lite_agent_loop.yaml}
 REWARD_PATH=${REWARD_PATH:-${ROOT_DIR}/deepmath_lite/verl_reward.py}
 
@@ -33,6 +35,7 @@ TEST_FREQ=${TEST_FREQ:--1}
 
 PROJECT_NAME=${PROJECT_NAME:-deepmath_lite}
 EXPERIMENT_NAME=${EXPERIMENT_NAME:-agent_grpo_smoke_qwen25_1p5b}
+TRAINER_LOGGER=${TRAINER_LOGGER:-'["console"]'}
 TRAINER_MODULE=${TRAINER_MODULE:-verl.trainer.main_ppo}
 VLLM_LOGGING_LEVEL=${VLLM_LOGGING_LEVEL:-INFO}
 
@@ -71,8 +74,8 @@ print(f"dependency preflight ok: numpy=={numpy_version}, numba=={numba_version}"
 PY
 
 python scripts/prepare_deepmath_verl.py \
-    --limit 32 \
-    --val-size 4 \
+    --limit "${DATA_LIMIT}" \
+    --val-size "${VAL_SIZE}" \
     --output-dir "${DATA_DIR}"
 
 DATA=(
@@ -142,7 +145,7 @@ REWARD=(
 
 TRAINER=(
     trainer.critic_warmup=0
-    trainer.logger='["console"]'
+    trainer.logger="${TRAINER_LOGGER}"
     trainer.project_name="${PROJECT_NAME}"
     trainer.experiment_name="${EXPERIMENT_NAME}"
     trainer.n_gpus_per_node="${NGPUS_PER_NODE}"
