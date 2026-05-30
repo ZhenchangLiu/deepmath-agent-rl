@@ -143,9 +143,9 @@ gpus: 1
 vllm: V0 engine, eager mode, small context/concurrency
 ```
 
-The script passes `VLLM_USE_V1` and `VLLM_LOGGING_LEVEL` through
-`ray_kwargs.ray_init.runtime_env.env_vars`, because VeRL creates vLLM inside Ray
-actors and plain shell exports may not be visible in the server actor.
+The script appends `VLLM_USE_V1` and `VLLM_LOGGING_LEVEL` through
+`+ray_kwargs.ray_init.runtime_env.env_vars`, because VeRL creates vLLM inside
+Ray actors and plain shell exports may not be visible in the server actor.
 
 To switch the same path to 7B later:
 
