@@ -1,9 +1,11 @@
+import asyncio
 import unittest
 
 from deepmath_lite.verl_agent_loop_core import (
     ASSISTANT_ROLE,
     OBSERVATION_ROLE,
     AgentLoopCore,
+    AsyncAgentLoopCore,
 )
 
 
@@ -18,6 +20,11 @@ class ScriptedModel:
         if not self.outputs:
             raise AssertionError("model called more times than scripted")
         return self.outputs.pop(0)
+
+
+class AsyncScriptedModel(ScriptedModel):
+    async def generate(self, prompt: str) -> str:
+        return super().generate(prompt)
 
 
 class CharacterTokenizer:
@@ -116,6 +123,23 @@ class AgentLoopCoreTests(unittest.TestCase):
 
         self.assertEqual(rollout.stopped_reason, "malformed_boxed_answer")
         self.assertIsNone(rollout.final_answer)
+
+    def test_async_core_executes_code_and_masks_observation_tokens(self):
+        async def run_case():
+            model = AsyncScriptedModel(
+                [
+                    "<python>\nprint(2 + 3)\n</python>",
+                    "\\boxed{5}",
+                ]
+            )
+            return await AsyncAgentLoopCore(model=model).run("What is 2+3?")
+
+        rollout = asyncio.run(run_case())
+        self.assertEqual(rollout.final_answer, "5")
+        response_ids, response_mask = rollout.build_response_ids_and_mask(CharacterTokenizer())
+        self.assertEqual(len(response_ids), len(response_mask))
+        self.assertIn(0, response_mask)
+        self.assertIn(1, response_mask)
 
 
 if __name__ == "__main__":

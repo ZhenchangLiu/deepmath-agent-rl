@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .protocol import build_prompt
-from .verl_agent_loop_core import AgentLoopCore, AgentRollout, TextModelRunner, TextTokenizer
+from .verl_agent_loop_core import AsyncAgentLoopCore, AgentRollout, AsyncTextModelRunner, TextTokenizer
 
 
 def import_verl_agent_loop_types() -> tuple[Any, Any, Any, Any]:
@@ -95,7 +95,7 @@ def to_verl_output(payload: AgentLoopOutputPayload) -> Any:
     )
 
 
-class VeRLServerModelRunner(TextModelRunner):
+class VeRLServerModelRunner(AsyncTextModelRunner):
     """Placeholder for the VeRL LLM server manager integration.
 
     This is intentionally not implemented locally. The H800 integration should
@@ -107,7 +107,7 @@ class VeRLServerModelRunner(TextModelRunner):
         self.server_manager = server_manager
         self.sampling_params = sampling_params
 
-    def generate(self, prompt: str) -> str:
+    async def generate(self, prompt: str) -> str:
         raise NotImplementedError("VeRL server_manager generation is wired in the H800 adapter step")
 
 
@@ -122,7 +122,7 @@ def build_deepmath_agent_loop_class() -> type:
             question = extract_question(kwargs)
             tokenizer = VeRLPromptTokenizer(self.tokenizer)
             model = VeRLServerModelRunner(self.server_manager, sampling_params)
-            rollout = AgentLoopCore(model=model).run(question)
+            rollout = await AsyncAgentLoopCore(model=model).run(question)
             payload = build_output_payload(question, rollout, tokenizer)
             return to_verl_output(payload)
 
