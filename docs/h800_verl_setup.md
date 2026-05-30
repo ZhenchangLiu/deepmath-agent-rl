@@ -145,7 +145,8 @@ vllm: V0 engine, eager mode, small context/concurrency
 
 The script appends `VLLM_USE_V1` and `VLLM_LOGGING_LEVEL` through
 `+ray_kwargs.ray_init.runtime_env.env_vars`, because VeRL creates vLLM inside
-Ray actors and plain shell exports may not be visible in the server actor.
+Ray actors and plain shell exports may not be visible in the server actor. The
+values are quoted so Hydra keeps them as strings for Ray's `runtime_env`.
 
 To switch the same path to 7B later:
 

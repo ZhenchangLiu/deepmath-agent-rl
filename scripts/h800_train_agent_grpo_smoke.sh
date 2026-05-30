@@ -125,8 +125,8 @@ TRAINER=(
 )
 
 RAY_ENV=(
-    +ray_kwargs.ray_init.runtime_env.env_vars.VLLM_USE_V1="${VLLM_USE_V1}"
-    +ray_kwargs.ray_init.runtime_env.env_vars.VLLM_LOGGING_LEVEL="${VLLM_LOGGING_LEVEL}"
+    +ray_kwargs.ray_init.runtime_env.env_vars.VLLM_USE_V1="'${VLLM_USE_V1}'"
+    +ray_kwargs.ray_init.runtime_env.env_vars.VLLM_LOGGING_LEVEL="'${VLLM_LOGGING_LEVEL}'"
 )
 
 python -m "${TRAINER_MODULE}" \
