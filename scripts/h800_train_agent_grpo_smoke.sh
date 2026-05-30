@@ -24,6 +24,7 @@ ROLLOUT_MAX_MODEL_LEN=${ROLLOUT_MAX_MODEL_LEN:-1536}
 ROLLOUT_MAX_NUM_SEQS=${ROLLOUT_MAX_NUM_SEQS:-8}
 ROLLOUT_MAX_NUM_BATCHED_TOKENS=${ROLLOUT_MAX_NUM_BATCHED_TOKENS:-2048}
 ROLLOUT_LOAD_FORMAT=${ROLLOUT_LOAD_FORMAT:-dummy}
+AGENT_LOOP_WORKERS=${AGENT_LOOP_WORKERS:-1}
 NGPUS_PER_NODE=${NGPUS_PER_NODE:-1}
 NNODES=${NNODES:-1}
 TOTAL_TRAINING_STEPS=${TOTAL_TRAINING_STEPS:-1}
@@ -122,6 +123,7 @@ ROLLOUT=(
     actor_rollout_ref.rollout.enable_prefix_caching=False
     actor_rollout_ref.rollout.enforce_eager=True
     actor_rollout_ref.rollout.free_cache_engine=True
+    actor_rollout_ref.rollout.agent.num_workers="${AGENT_LOOP_WORKERS}"
     actor_rollout_ref.rollout.agent.default_agent_loop=deepmath_lite
     actor_rollout_ref.rollout.agent.agent_loop_config_path="${AGENT_LOOP_CONFIG}"
 )

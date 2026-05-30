@@ -149,6 +149,7 @@ data: 32 DeepMath-103K samples, 4 validation samples
 steps: 1 optimizer step
 gpus: 1
 vllm: V1 engine, eager mode, small context/concurrency
+agent loop workers: 1
 ```
 
 The script appends `VLLM_USE_V1` and `VLLM_LOGGING_LEVEL` through
@@ -180,6 +181,7 @@ VLLM_USE_V1=0 bash scripts/h800_train_agent_grpo_smoke.sh
 VLLM_LOGGING_LEVEL=DEBUG bash scripts/h800_train_agent_grpo_smoke.sh
 ROLLOUT_LOAD_FORMAT=auto bash scripts/h800_train_agent_grpo_smoke.sh
 ROLLOUT_GPU_MEM_UTIL=0.5 bash scripts/h800_train_agent_grpo_smoke.sh
+AGENT_LOOP_WORKERS=4 TRAIN_BATCH_SIZE=4 ROLLOUT_N=2 bash scripts/h800_train_agent_grpo_smoke.sh
 CUDA_VISIBLE_DEVICES=0 bash scripts/h800_train_agent_grpo_smoke.sh
 ```
 
