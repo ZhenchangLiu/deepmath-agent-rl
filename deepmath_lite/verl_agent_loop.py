@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
+from uuid import uuid4
 
 from .protocol import build_prompt
 from .verl_agent_loop_core import AsyncAgentLoopCore, AgentRollout, AsyncTextModelRunner, TextTokenizer
@@ -47,6 +48,9 @@ class VeRLPromptTokenizer(TextTokenizer):
 
     def encode(self, text: str) -> list[int]:
         return self.tokenizer.encode(text, add_special_tokens=False)
+
+    def decode(self, token_ids: list[int]) -> str:
+        return self.tokenizer.decode(token_ids, skip_special_tokens=False)
 
 
 def build_output_payload(
@@ -96,19 +100,30 @@ def to_verl_output(payload: AgentLoopOutputPayload) -> Any:
 
 
 class VeRLServerModelRunner(AsyncTextModelRunner):
-    """Placeholder for the VeRL LLM server manager integration.
+    """Async model runner backed by VeRL's LLM server manager."""
 
-    This is intentionally not implemented locally. The H800 integration should
-    call VeRL's async LLM server manager here and return one assistant span per
-    agent step.
-    """
-
-    def __init__(self, server_manager: Any, sampling_params: dict[str, Any]):
+    def __init__(self, server_manager: Any, tokenizer: VeRLPromptTokenizer, sampling_params: dict[str, Any]):
         self.server_manager = server_manager
+        self.tokenizer = tokenizer
         self.sampling_params = sampling_params
+        self.last_metadata: dict[str, Any] | None = None
 
     async def generate(self, prompt: str) -> str:
-        raise NotImplementedError("VeRL server_manager generation is wired in the H800 adapter step")
+        prompt_ids = self.tokenizer.encode(prompt)
+        output = await self.server_manager.generate(
+            request_id=uuid4().hex,
+            prompt_ids=prompt_ids,
+            sampling_params=dict(self.sampling_params),
+        )
+        token_ids = list(output.token_ids)
+        self.last_metadata = {
+            "provider": "verl_server_manager",
+            "finish_reason": getattr(output, "stop_reason", None),
+            "token_count": len(token_ids),
+            "num_preempted": getattr(output, "num_preempted", None),
+            "extra_fields": getattr(output, "extra_fields", {}),
+        }
+        return self.tokenizer.decode(token_ids)
 
 
 def build_deepmath_agent_loop_class() -> type:
@@ -121,7 +136,7 @@ def build_deepmath_agent_loop_class() -> type:
         async def run(self, sampling_params: dict[str, Any], **kwargs: Any) -> Any:
             question = extract_question(kwargs)
             tokenizer = VeRLPromptTokenizer(self.tokenizer)
-            model = VeRLServerModelRunner(self.server_manager, sampling_params)
+            model = VeRLServerModelRunner(self.server_manager, tokenizer, sampling_params)
             rollout = await AsyncAgentLoopCore(model=model).run(question)
             payload = build_output_payload(question, rollout, tokenizer)
             return to_verl_output(payload)
