@@ -39,7 +39,7 @@ cd "${ROOT_DIR}"
 export PYTHONPATH="${ROOT_DIR}:${PYTHONPATH:-}"
 export HYDRA_FULL_ERROR="${HYDRA_FULL_ERROR:-1}"
 export RAY_DEDUP_LOGS="${RAY_DEDUP_LOGS:-0}"
-export VLLM_USE_V1="${VLLM_USE_V1:-0}"
+export VLLM_USE_V1="${VLLM_USE_V1:-1}"
 export VLLM_LOGGING_LEVEL="${VLLM_LOGGING_LEVEL}"
 
 python scripts/prepare_deepmath_verl.py \

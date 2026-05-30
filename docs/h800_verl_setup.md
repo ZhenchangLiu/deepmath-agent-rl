@@ -140,7 +140,7 @@ rollout: vLLM async AgentLoop
 data: 32 DeepMath-103K samples, 4 validation samples
 steps: 1 optimizer step
 gpus: 1
-vllm: V0 engine, eager mode, small context/concurrency
+vllm: V1 engine, eager mode, small context/concurrency
 ```
 
 The script appends `VLLM_USE_V1` and `VLLM_LOGGING_LEVEL` through
@@ -169,7 +169,7 @@ grep -R "Traceback\|ERROR\|Engine core initialization failed\|CUDA\|No available
 Useful toggles for isolating vLLM startup issues:
 
 ```bash
-VLLM_USE_V1=1 bash scripts/h800_train_agent_grpo_smoke.sh
+VLLM_USE_V1=0 bash scripts/h800_train_agent_grpo_smoke.sh
 VLLM_LOGGING_LEVEL=DEBUG bash scripts/h800_train_agent_grpo_smoke.sh
 ROLLOUT_LOAD_FORMAT=auto bash scripts/h800_train_agent_grpo_smoke.sh
 ROLLOUT_GPU_MEM_UTIL=0.5 bash scripts/h800_train_agent_grpo_smoke.sh
