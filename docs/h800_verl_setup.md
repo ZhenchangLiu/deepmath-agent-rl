@@ -143,6 +143,10 @@ gpus: 1
 vllm: V0 engine, eager mode, small context/concurrency
 ```
 
+The script passes `VLLM_USE_V1` and `VLLM_LOGGING_LEVEL` through
+`ray_kwargs.ray_init.runtime_env.env_vars`, because VeRL creates vLLM inside Ray
+actors and plain shell exports may not be visible in the server actor.
+
 To switch the same path to 7B later:
 
 ```bash
@@ -165,6 +169,7 @@ Useful toggles for isolating vLLM startup issues:
 
 ```bash
 VLLM_USE_V1=1 bash scripts/h800_train_agent_grpo_smoke.sh
+VLLM_LOGGING_LEVEL=DEBUG bash scripts/h800_train_agent_grpo_smoke.sh
 ROLLOUT_LOAD_FORMAT=auto bash scripts/h800_train_agent_grpo_smoke.sh
 ROLLOUT_GPU_MEM_UTIL=0.5 bash scripts/h800_train_agent_grpo_smoke.sh
 CUDA_VISIBLE_DEVICES=0 bash scripts/h800_train_agent_grpo_smoke.sh

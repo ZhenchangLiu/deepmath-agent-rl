@@ -33,12 +33,14 @@ TEST_FREQ=${TEST_FREQ:--1}
 PROJECT_NAME=${PROJECT_NAME:-deepmath_lite}
 EXPERIMENT_NAME=${EXPERIMENT_NAME:-agent_grpo_smoke_qwen25_1p5b}
 TRAINER_MODULE=${TRAINER_MODULE:-verl.trainer.main_ppo}
+VLLM_LOGGING_LEVEL=${VLLM_LOGGING_LEVEL:-INFO}
 
 cd "${ROOT_DIR}"
 export PYTHONPATH="${ROOT_DIR}:${PYTHONPATH:-}"
 export HYDRA_FULL_ERROR="${HYDRA_FULL_ERROR:-1}"
 export RAY_DEDUP_LOGS="${RAY_DEDUP_LOGS:-0}"
 export VLLM_USE_V1="${VLLM_USE_V1:-0}"
+export VLLM_LOGGING_LEVEL="${VLLM_LOGGING_LEVEL}"
 
 python scripts/prepare_deepmath_verl.py \
     --limit 32 \
@@ -122,6 +124,11 @@ TRAINER=(
     trainer.val_before_train=False
 )
 
+RAY_ENV=(
+    ray_kwargs.ray_init.runtime_env.env_vars.VLLM_USE_V1="${VLLM_USE_V1}"
+    ray_kwargs.ray_init.runtime_env.env_vars.VLLM_LOGGING_LEVEL="${VLLM_LOGGING_LEVEL}"
+)
+
 python -m "${TRAINER_MODULE}" \
     "${DATA[@]}" \
     "${MODEL[@]}" \
@@ -130,4 +137,5 @@ python -m "${TRAINER_MODULE}" \
     "${REF[@]}" \
     "${REWARD[@]}" \
     "${TRAINER[@]}" \
+    "${RAY_ENV[@]}" \
     "$@"
