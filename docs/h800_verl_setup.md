@@ -162,8 +162,7 @@ If the vLLM server fails before entering `DeepMathLiteAgentLoop.run`, inspect
 the Ray worker logs for the real engine error:
 
 ```bash
-grep -R "Traceback\|ERROR\|Engine core initialization failed\|CUDA\|No available memory" \
-  /tmp/ray/session_latest/logs | tail -200
+bash scripts/h800_collect_ray_logs.sh
 ```
 
 Useful toggles for isolating vLLM startup issues:
