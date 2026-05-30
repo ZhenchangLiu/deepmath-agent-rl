@@ -140,6 +140,7 @@ rollout: vLLM async AgentLoop
 data: 32 DeepMath-103K samples, 4 validation samples
 steps: 1 optimizer step
 gpus: 1
+vllm: V0 engine, eager mode, small context/concurrency
 ```
 
 To switch the same path to 7B later:
@@ -150,6 +151,23 @@ NGPUS_PER_NODE=8 \
 ROLLOUT_TP=2 \
 ROLLOUT_GPU_MEM_UTIL=0.6 \
 bash scripts/h800_train_agent_grpo_smoke.sh
+```
+
+If the vLLM server fails before entering `DeepMathLiteAgentLoop.run`, inspect
+the Ray worker logs for the real engine error:
+
+```bash
+grep -R "Traceback\|ERROR\|Engine core initialization failed\|CUDA\|No available memory" \
+  /tmp/ray/session_latest/logs | tail -200
+```
+
+Useful toggles for isolating vLLM startup issues:
+
+```bash
+VLLM_USE_V1=1 bash scripts/h800_train_agent_grpo_smoke.sh
+ROLLOUT_LOAD_FORMAT=auto bash scripts/h800_train_agent_grpo_smoke.sh
+ROLLOUT_GPU_MEM_UTIL=0.5 bash scripts/h800_train_agent_grpo_smoke.sh
+CUDA_VISIBLE_DEVICES=0 bash scripts/h800_train_agent_grpo_smoke.sh
 ```
 
 ## First Training Smoke Target

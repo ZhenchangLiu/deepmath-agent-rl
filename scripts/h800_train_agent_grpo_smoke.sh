@@ -20,6 +20,10 @@ MAX_RESPONSE_LENGTH=${MAX_RESPONSE_LENGTH:-512}
 ROLLOUT_N=${ROLLOUT_N:-2}
 ROLLOUT_TP=${ROLLOUT_TP:-1}
 ROLLOUT_GPU_MEM_UTIL=${ROLLOUT_GPU_MEM_UTIL:-0.35}
+ROLLOUT_MAX_MODEL_LEN=${ROLLOUT_MAX_MODEL_LEN:-1536}
+ROLLOUT_MAX_NUM_SEQS=${ROLLOUT_MAX_NUM_SEQS:-8}
+ROLLOUT_MAX_NUM_BATCHED_TOKENS=${ROLLOUT_MAX_NUM_BATCHED_TOKENS:-2048}
+ROLLOUT_LOAD_FORMAT=${ROLLOUT_LOAD_FORMAT:-dummy}
 NGPUS_PER_NODE=${NGPUS_PER_NODE:-1}
 NNODES=${NNODES:-1}
 TOTAL_TRAINING_STEPS=${TOTAL_TRAINING_STEPS:-1}
@@ -32,6 +36,9 @@ TRAINER_MODULE=${TRAINER_MODULE:-verl.trainer.main_ppo}
 
 cd "${ROOT_DIR}"
 export PYTHONPATH="${ROOT_DIR}:${PYTHONPATH:-}"
+export HYDRA_FULL_ERROR="${HYDRA_FULL_ERROR:-1}"
+export RAY_DEDUP_LOGS="${RAY_DEDUP_LOGS:-0}"
+export VLLM_USE_V1="${VLLM_USE_V1:-0}"
 
 python scripts/prepare_deepmath_verl.py \
     --limit 32 \
@@ -76,10 +83,15 @@ ROLLOUT=(
     actor_rollout_ref.rollout.mode=async
     actor_rollout_ref.rollout.tensor_model_parallel_size="${ROLLOUT_TP}"
     actor_rollout_ref.rollout.gpu_memory_utilization="${ROLLOUT_GPU_MEM_UTIL}"
+    actor_rollout_ref.rollout.max_model_len="${ROLLOUT_MAX_MODEL_LEN}"
+    actor_rollout_ref.rollout.max_num_seqs="${ROLLOUT_MAX_NUM_SEQS}"
+    actor_rollout_ref.rollout.max_num_batched_tokens="${ROLLOUT_MAX_NUM_BATCHED_TOKENS}"
+    actor_rollout_ref.rollout.load_format="${ROLLOUT_LOAD_FORMAT}"
     actor_rollout_ref.rollout.n="${ROLLOUT_N}"
     actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu="${LOG_PROB_MICRO_BATCH_SIZE_PER_GPU}"
     actor_rollout_ref.rollout.enable_chunked_prefill=False
-    actor_rollout_ref.rollout.enforce_eager=False
+    actor_rollout_ref.rollout.enable_prefix_caching=False
+    actor_rollout_ref.rollout.enforce_eager=True
     actor_rollout_ref.rollout.free_cache_engine=True
     actor_rollout_ref.rollout.agent.default_agent_loop=deepmath_lite
     actor_rollout_ref.rollout.agent.agent_loop_config_path="${AGENT_LOOP_CONFIG}"
