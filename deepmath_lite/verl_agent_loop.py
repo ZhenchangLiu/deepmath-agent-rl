@@ -61,6 +61,7 @@ def build_output_payload(
     tokenizer: TextTokenizer,
     reward_score: float | None = None,
     extra_fields: dict[str, Any] | None = None,
+    max_response_length: int | None = None,
 ) -> AgentLoopOutputPayload:
     """Convert the local rollout into the fields VeRL expects."""
 
@@ -68,6 +69,12 @@ def build_output_payload(
     response_ids, response_mask = rollout.build_response_ids_and_mask(tokenizer)
     if len(response_ids) != len(response_mask):
         raise ValueError("response_ids and response_mask must have the same length")
+    raw_response_token_count = len(response_ids)
+    response_truncated = False
+    if max_response_length is not None and max_response_length >= 0 and raw_response_token_count > max_response_length:
+        response_ids = response_ids[:max_response_length]
+        response_mask = response_mask[:max_response_length]
+        response_truncated = True
 
     return AgentLoopOutputPayload(
         prompt_ids=prompt_ids,
@@ -83,6 +90,8 @@ def build_output_payload(
         extra_fields={
             "stopped_reason": rollout.stopped_reason,
             "final_answer": rollout.final_answer,
+            "raw_response_token_count": raw_response_token_count,
+            "response_truncated": response_truncated,
             **(extra_fields or {}),
         },
     )
@@ -156,6 +165,49 @@ class VeRLServerModelRunner(AsyncTextModelRunner):
         return self.tokenizer.decode(token_ids)
 
 
+def _get_nested_value(obj: Any, path: tuple[str, ...]) -> Any:
+    current = obj
+    for key in path:
+        if current is None:
+            return None
+        if isinstance(current, dict):
+            current = current.get(key)
+            continue
+        try:
+            current = current[key]
+            continue
+        except Exception:
+            pass
+        current = getattr(current, key, None)
+    return current
+
+
+def resolve_max_response_length(
+    sampling_params: dict[str, Any],
+    trainer_config: Any = None,
+    data_config: Any = None,
+) -> int | None:
+    """Find VeRL's total response width for AgentLoopOutput tensors."""
+
+    candidates = [
+        _get_nested_value(data_config, ("max_response_length",)),
+        _get_nested_value(trainer_config, ("data", "max_response_length")),
+        sampling_params.get("max_response_length"),
+        sampling_params.get("max_tokens"),
+        sampling_params.get("max_new_tokens"),
+    ]
+    for value in candidates:
+        if value is None:
+            continue
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            continue
+        if parsed >= 0:
+            return parsed
+    return None
+
+
 class DeepMathLiteAgentLoop:
     """Hydra-loadable VeRL AgentLoop implementation for DeepMath Lite."""
 
@@ -197,6 +249,11 @@ class DeepMathLiteAgentLoop:
             tokenizer,
             reward_score=reward_score,
             extra_fields={"reward_extra_info": reward_extra_info},
+            max_response_length=resolve_max_response_length(
+                sampling_params,
+                trainer_config=self.trainer_config,
+                data_config=self.data_config,
+            ),
         )
         return to_verl_output(payload)
 
@@ -221,6 +278,11 @@ def build_deepmath_agent_loop_class() -> type:
                 tokenizer,
                 reward_score=reward_score,
                 extra_fields={"reward_extra_info": reward_extra_info},
+                max_response_length=resolve_max_response_length(
+                    sampling_params,
+                    trainer_config=getattr(self, "trainer_config", None),
+                    data_config=getattr(self, "data_config", None),
+                ),
             )
             return to_verl_output(payload)
 
