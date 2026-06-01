@@ -36,7 +36,7 @@ TEST_FREQ=${TEST_FREQ:--1}
 PROJECT_NAME=${PROJECT_NAME:-deepmath_lite}
 EXPERIMENT_NAME=${EXPERIMENT_NAME:-agent_grpo_smoke_qwen25_1p5b}
 TRAINER_LOGGER=${TRAINER_LOGGER:-'["console"]'}
-TRAINER_MODULE=${TRAINER_MODULE:-verl.trainer.main_ppo}
+TRAINER_MODULE=${TRAINER_MODULE:-deepmath_lite.verl_main_ppo_reward_metrics}
 VLLM_LOGGING_LEVEL=${VLLM_LOGGING_LEVEL:-INFO}
 
 cd "${ROOT_DIR}"
