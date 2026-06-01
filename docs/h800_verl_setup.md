@@ -251,8 +251,8 @@ rollout n: 4
 rollout tensor parallel size: 2
 agent loop workers: 4
 max prompt length: 2048
-max response length: 2048
-rollout max model length: 4096
+max response length: 4096
+rollout max model length: 6144
 logger: ["console","wandb"]
 checkpoint: checkpoints/deepmath_lite/agent_grpo_shaped_probe_qwen25_7b
 ```
@@ -263,7 +263,7 @@ If the 7B run hits memory pressure, reduce one knob at a time:
 TRAIN_BATCH_SIZE=4 PPO_MINI_BATCH_SIZE=4 bash scripts/h800_train_agent_grpo_probe_7b.sh
 ROLLOUT_N=2 AGENT_LOOP_WORKERS=2 bash scripts/h800_train_agent_grpo_probe_7b.sh
 ROLLOUT_GPU_MEM_UTIL=0.45 bash scripts/h800_train_agent_grpo_probe_7b.sh
-MAX_PROMPT_LENGTH=1024 MAX_RESPONSE_LENGTH=1024 ROLLOUT_MAX_MODEL_LEN=2048 bash scripts/h800_train_agent_grpo_probe_7b.sh
+MAX_PROMPT_LENGTH=1024 MAX_RESPONSE_LENGTH=2048 ROLLOUT_MAX_MODEL_LEN=3072 bash scripts/h800_train_agent_grpo_probe_7b.sh
 ```
 
 Track these metrics first:
