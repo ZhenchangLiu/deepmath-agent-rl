@@ -252,6 +252,7 @@ rollout tensor parallel size: 2
 agent loop workers: 4
 max prompt length: 2048
 max response length: 2048
+rollout max model length: 4096
 logger: ["console","wandb"]
 checkpoint: checkpoints/deepmath_lite/agent_grpo_shaped_probe_qwen25_7b
 ```
