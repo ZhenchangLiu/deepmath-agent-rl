@@ -170,6 +170,8 @@ def _get_nested_value(obj: Any, path: tuple[str, ...]) -> Any:
     for key in path:
         if current is None:
             return None
+        if hasattr(current, "config"):
+            current = current.config
         if isinstance(current, dict):
             current = current.get(key)
             continue
@@ -186,10 +188,12 @@ def resolve_max_response_length(
     sampling_params: dict[str, Any],
     trainer_config: Any = None,
     data_config: Any = None,
+    agent_loop_max_response_length: int | str | None = None,
 ) -> int | None:
     """Find VeRL's total response width for AgentLoopOutput tensors."""
 
     candidates = [
+        agent_loop_max_response_length,
         _get_nested_value(data_config, ("max_response_length",)),
         _get_nested_value(trainer_config, ("data", "max_response_length")),
         sampling_params.get("max_response_length"),
@@ -221,6 +225,7 @@ class DeepMathLiteAgentLoop:
         data_config: Any = None,
         max_steps: int = 5,
         timeout_s: float = 2.0,
+        max_response_length: int | str | None = None,
         **_: Any,
     ):
         self.trainer_config = trainer_config
@@ -231,6 +236,7 @@ class DeepMathLiteAgentLoop:
         self.data_config = data_config
         self.max_steps = max_steps
         self.timeout_s = timeout_s
+        self.max_response_length = max_response_length
 
     async def run(self, sampling_params: dict[str, Any], **kwargs: Any) -> Any:
         question = extract_question(kwargs)
@@ -253,6 +259,7 @@ class DeepMathLiteAgentLoop:
                 sampling_params,
                 trainer_config=self.trainer_config,
                 data_config=self.data_config,
+                agent_loop_max_response_length=self.max_response_length,
             ),
         )
         return to_verl_output(payload)
@@ -282,6 +289,7 @@ def build_deepmath_agent_loop_class() -> type:
                     sampling_params,
                     trainer_config=getattr(self, "trainer_config", None),
                     data_config=getattr(self, "data_config", None),
+                    agent_loop_max_response_length=getattr(self, "max_response_length", None),
                 ),
             )
             return to_verl_output(payload)

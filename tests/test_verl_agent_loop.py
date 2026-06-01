@@ -7,6 +7,7 @@ from deepmath_lite.verl_agent_loop import (
     VeRLPromptTokenizer,
     VeRLServerModelRunner,
     extract_ground_truth,
+    resolve_max_response_length,
     score_agent_rollout,
 )
 from deepmath_lite.verl_agent_loop_core import AgentRollout, RolloutStep
@@ -37,6 +38,11 @@ class FakeServerManager:
     async def generate(self, **kwargs):
         self.calls.append(kwargs)
         return FakeTokenOutput(token_ids=[ord("\\"), *map(ord, "boxed{5}")], extra_fields={"global_steps": 1})
+
+
+class FakeConfigWrap:
+    def __init__(self, config):
+        self.config = config
 
 
 class VerlAgentLoopAdapterTests(unittest.TestCase):
@@ -130,6 +136,24 @@ class VerlAgentLoopAdapterTests(unittest.TestCase):
 
     def test_extract_ground_truth_from_reward_model(self):
         self.assertEqual(extract_ground_truth({"reward_model": {"ground_truth": "42"}}), "42")
+
+    def test_resolves_max_response_length_from_verl_config_wrap(self):
+        trainer_config = FakeConfigWrap({"data": {"max_response_length": 1024}})
+
+        length = resolve_max_response_length({}, trainer_config=trainer_config)
+
+        self.assertEqual(length, 1024)
+
+    def test_agent_loop_config_length_takes_precedence(self):
+        trainer_config = FakeConfigWrap({"data": {"max_response_length": 1024}})
+
+        length = resolve_max_response_length(
+            {"max_tokens": 2048},
+            trainer_config=trainer_config,
+            agent_loop_max_response_length="512",
+        )
+
+        self.assertEqual(length, 512)
 
 
 if __name__ == "__main__":

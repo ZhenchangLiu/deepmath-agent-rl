@@ -2,3 +2,4 @@
   _target_: deepmath_lite.verl_agent_loop.DeepMathLiteAgentLoop
   max_steps: 5
   timeout_s: 2.0
+  max_response_length: ${oc.env:MAX_RESPONSE_LENGTH}

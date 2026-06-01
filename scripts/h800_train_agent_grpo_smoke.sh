@@ -45,6 +45,7 @@ export HYDRA_FULL_ERROR="${HYDRA_FULL_ERROR:-1}"
 export RAY_DEDUP_LOGS="${RAY_DEDUP_LOGS:-0}"
 export VLLM_USE_V1="${VLLM_USE_V1:-1}"
 export VLLM_LOGGING_LEVEL="${VLLM_LOGGING_LEVEL}"
+export MAX_RESPONSE_LENGTH
 
 python - <<'PY'
 from __future__ import annotations
