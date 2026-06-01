@@ -237,11 +237,27 @@ Track these metrics first:
 
 ```text
 critic/rewards/mean
+critic/format_reward/mean
+critic/answer_reward/mean
+critic/code_error_penalty/mean
 timing_s/agent_loop/tool_calls/mean
 response_length/clip_ratio
 actor/loss
 actor/grad_norm
 ```
+
+The current AgentLoop-shaped reward is:
+
+```text
+format bad: 0.0
+format ok, wrong answer, no code error: 0.2
+format ok, wrong answer, code error: 0.0
+format ok, correct answer, no code error: 1.0
+format ok, correct answer, code error: 0.8
+```
+
+It does not force first-turn tool use. The sparse answer verifier is unchanged;
+answer reward is only counted when the rollout ended with a legal boxed answer.
 
 ## First Training Smoke Target
 

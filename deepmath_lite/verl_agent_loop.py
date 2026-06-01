@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any
 from uuid import uuid4
 
+from .eval import verify_answer
 from .protocol import build_prompt
 from .verl_agent_loop_core import AsyncAgentLoopCore, AgentRollout, AsyncTextModelRunner, TextTokenizer
 
@@ -36,6 +37,7 @@ class AgentLoopOutputPayload:
     response_ids: list[int]
     response_mask: list[int]
     num_turns: int
+    reward_score: float | None = None
     metrics: dict[str, float | int] = field(default_factory=dict)
     extra_fields: dict[str, Any] = field(default_factory=dict)
 
@@ -57,6 +59,7 @@ def build_output_payload(
     question: str,
     rollout: AgentRollout,
     tokenizer: TextTokenizer,
+    reward_score: float | None = None,
     extra_fields: dict[str, Any] | None = None,
 ) -> AgentLoopOutputPayload:
     """Convert the local rollout into the fields VeRL expects."""
@@ -70,6 +73,7 @@ def build_output_payload(
         prompt_ids=prompt_ids,
         response_ids=response_ids,
         response_mask=response_mask,
+        reward_score=reward_score,
         num_turns=rollout.num_turns,
         metrics={
             "tool_calls": sum(1 for step in rollout.steps if step.code is not None),
@@ -93,10 +97,36 @@ def to_verl_output(payload: AgentLoopOutputPayload) -> Any:
         prompt_ids=payload.prompt_ids,
         response_ids=payload.response_ids,
         response_mask=payload.response_mask,
+        reward_score=payload.reward_score,
         num_turns=payload.num_turns,
         metrics=metrics,
         extra_fields=payload.extra_fields,
     )
+
+
+def score_agent_rollout(rollout: AgentRollout, ground_truth: str) -> tuple[float, dict[str, Any]]:
+    """Return shaped reward components for one agent rollout."""
+
+    format_ok = rollout.stopped_reason in {"boxed_answer", "max_steps"}
+    has_code_error = any(step.execution is not None and not step.execution.ok for step in rollout.steps)
+    answer_correct = format_ok and verify_answer(rollout.final_answer, ground_truth)
+
+    format_reward = 0.2 if format_ok else 0.0
+    answer_reward = 0.8 if answer_correct else 0.0
+    code_error_penalty = 0.2 if has_code_error else 0.0
+    score = max(0.0, format_reward + answer_reward - code_error_penalty)
+
+    return score, {
+        "score": score,
+        "format_reward": format_reward,
+        "answer_reward": answer_reward,
+        "code_error_penalty": code_error_penalty,
+        "format_ok": format_ok,
+        "answer_correct": answer_correct,
+        "has_code_error": has_code_error,
+        "stopped_reason": rollout.stopped_reason,
+        "final_answer": rollout.final_answer,
+    }
 
 
 class VeRLServerModelRunner(AsyncTextModelRunner):
@@ -152,6 +182,7 @@ class DeepMathLiteAgentLoop:
 
     async def run(self, sampling_params: dict[str, Any], **kwargs: Any) -> Any:
         question = extract_question(kwargs)
+        ground_truth = extract_ground_truth(kwargs)
         tokenizer = VeRLPromptTokenizer(self.tokenizer)
         model = VeRLServerModelRunner(self.server_manager, tokenizer, sampling_params)
         rollout = await AsyncAgentLoopCore(
@@ -159,7 +190,14 @@ class DeepMathLiteAgentLoop:
             max_steps=self.max_steps,
             timeout_s=self.timeout_s,
         ).run(question)
-        payload = build_output_payload(question, rollout, tokenizer)
+        reward_score, reward_extra_info = score_agent_rollout(rollout, ground_truth)
+        payload = build_output_payload(
+            question,
+            rollout,
+            tokenizer,
+            reward_score=reward_score,
+            extra_fields={"reward_extra_info": reward_extra_info},
+        )
         return to_verl_output(payload)
 
 
@@ -172,10 +210,18 @@ def build_deepmath_agent_loop_class() -> type:
     class DeepMathLiteAgentLoop(AgentLoopBase):  # type: ignore[misc, valid-type]
         async def run(self, sampling_params: dict[str, Any], **kwargs: Any) -> Any:
             question = extract_question(kwargs)
+            ground_truth = extract_ground_truth(kwargs)
             tokenizer = VeRLPromptTokenizer(self.tokenizer)
             model = VeRLServerModelRunner(self.server_manager, tokenizer, sampling_params)
             rollout = await AsyncAgentLoopCore(model=model).run(question)
-            payload = build_output_payload(question, rollout, tokenizer)
+            reward_score, reward_extra_info = score_agent_rollout(rollout, ground_truth)
+            payload = build_output_payload(
+                question,
+                rollout,
+                tokenizer,
+                reward_score=reward_score,
+                extra_fields={"reward_extra_info": reward_extra_info},
+            )
             return to_verl_output(payload)
 
     return DeepMathLiteAgentLoop
@@ -205,3 +251,22 @@ def extract_question(dataset_fields: dict[str, Any]) -> str:
         return str(question)
 
     raise ValueError("expected prompt, question, or problem in dataset fields")
+
+
+def extract_ground_truth(dataset_fields: dict[str, Any]) -> str:
+    """Extract ground truth answer from common VeRL reward field shapes."""
+
+    reward_model = dataset_fields.get("reward_model")
+    if hasattr(reward_model, "item"):
+        reward_model = reward_model.item()
+    if isinstance(reward_model, dict) and reward_model.get("ground_truth") is not None:
+        return str(reward_model["ground_truth"])
+
+    for key in ("ground_truth", "answer", "target", "final_answer"):
+        value = dataset_fields.get(key)
+        if value is not None:
+            if hasattr(value, "item"):
+                value = value.item()
+            return str(value)
+
+    raise ValueError("expected reward_model.ground_truth or answer field in dataset fields")
