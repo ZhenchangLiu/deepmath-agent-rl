@@ -10,6 +10,7 @@ VAL_FILE=${VAL_FILE:-/tmp/deepmath_verl_smoke_data/val.parquet}
 DATA_DIR=${DATA_DIR:-/tmp/deepmath_verl_smoke_data}
 DATA_LIMIT=${DATA_LIMIT:-32}
 VAL_SIZE=${VAL_SIZE:-4}
+LOG_VAL_GENERATIONS=${LOG_VAL_GENERATIONS:-${VAL_SIZE}}
 AGENT_LOOP_CONFIG=${AGENT_LOOP_CONFIG:-${ROOT_DIR}/configs/verl/deepmath_lite_agent_loop.yaml}
 REWARD_PATH=${REWARD_PATH:-${ROOT_DIR}/deepmath_lite/verl_reward.py}
 
@@ -153,8 +154,9 @@ TRAINER=(
     trainer.nnodes="${NNODES}"
     trainer.save_freq="${SAVE_FREQ}"
     trainer.test_freq="${TEST_FREQ}"
+    trainer.log_val_generations="${LOG_VAL_GENERATIONS}"
     trainer.total_training_steps="${TOTAL_TRAINING_STEPS}"
-    trainer.val_before_train=False
+    trainer.val_before_train=True
 )
 
 RAY_ENV=(
