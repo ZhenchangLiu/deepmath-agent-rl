@@ -12,6 +12,7 @@ export TRAIN_FILE=${TRAIN_FILE:-${DATA_DIR}/train.parquet}
 export VAL_FILE=${VAL_FILE:-${DATA_DIR}/val.parquet}
 export DATA_LIMIT=${DATA_LIMIT:-256}
 export VAL_SIZE=${VAL_SIZE:-16}
+export LOG_VAL_GENERATIONS=${LOG_VAL_GENERATIONS:-${VAL_SIZE}}
 
 export PROJECT_NAME=${PROJECT_NAME:-deepmath_lite}
 export EXPERIMENT_NAME=${EXPERIMENT_NAME:-agent_grpo_probe5_qwen25_1p5b}
