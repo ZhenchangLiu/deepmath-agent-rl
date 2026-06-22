@@ -142,12 +142,20 @@ class VerlAgentLoopAdapterTests(unittest.TestCase):
                 "format_reward": 0.2,
                 "answer_reward": 0.8,
                 "code_error_penalty": 0.0,
+                "answer_correct": True,
+                "stopped_reason": "boxed_answer",
+                "final_answer": None,
             }
         )
 
         self.assertEqual(fields["reward_extra_info"]["format_reward"], 0.2)
         self.assertEqual(fields["format_reward"], 0.2)
         self.assertEqual(fields["answer_reward"], 0.8)
+        self.assertEqual(fields["answer_correct"], 1.0)
+        self.assertNotIn("stopped_reason", fields["reward_extra_info"])
+        self.assertNotIn("final_answer", fields["reward_extra_info"])
+        self.assertNotIn("stopped_reason", fields)
+        self.assertNotIn("final_answer", fields)
 
     def test_extract_ground_truth_from_reward_model(self):
         self.assertEqual(extract_ground_truth({"reward_model": {"ground_truth": "42"}}), "42")

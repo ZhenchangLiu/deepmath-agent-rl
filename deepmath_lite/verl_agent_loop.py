@@ -8,6 +8,7 @@ depend on a fully working VeRL/Ray/vLLM stack. The core rollout logic lives in
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from numbers import Real
 from typing import Any
 from uuid import uuid4
 
@@ -141,9 +142,14 @@ def score_agent_rollout(rollout: AgentRollout, ground_truth: str) -> tuple[float
 def build_reward_extra_fields(reward_extra_info: dict[str, Any]) -> dict[str, Any]:
     """Expose reward details in both nested and flat forms for VeRL metrics."""
 
+    numeric_reward_extra_info = {
+        key: float(value)
+        for key, value in reward_extra_info.items()
+        if isinstance(value, Real)
+    }
     return {
-        "reward_extra_info": reward_extra_info,
-        **reward_extra_info,
+        "reward_extra_info": numeric_reward_extra_info,
+        **numeric_reward_extra_info,
     }
 
 
