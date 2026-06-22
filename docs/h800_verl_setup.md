@@ -257,6 +257,18 @@ logger: ["console","wandb"]
 checkpoint: checkpoints/deepmath_lite/agent_grpo_shaped_probe_qwen25_7b
 ```
 
+The training data preparation launched by the H800 scripts now appends a
+tool-use instruction by default:
+
+```text
+first response: exactly one <python>...</python> block
+after observation: continue solving and put the final answer in \boxed{...}
+no markdown code fences
+```
+
+Override it with `TRAIN_INSTRUCTION=...` only when intentionally changing the
+training prompt.
+
 If the 7B run hits memory pressure, reduce one knob at a time:
 
 ```bash
@@ -274,6 +286,7 @@ critic/format_reward/mean
 critic/answer_reward/mean
 critic/code_error_penalty/mean
 timing_s/agent_loop/tool_calls/mean
+num_turns/mean
 response_length/clip_ratio
 actor/loss
 actor/grad_norm

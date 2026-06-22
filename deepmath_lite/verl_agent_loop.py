@@ -138,6 +138,15 @@ def score_agent_rollout(rollout: AgentRollout, ground_truth: str) -> tuple[float
     }
 
 
+def build_reward_extra_fields(reward_extra_info: dict[str, Any]) -> dict[str, Any]:
+    """Expose reward details in both nested and flat forms for VeRL metrics."""
+
+    return {
+        "reward_extra_info": reward_extra_info,
+        **reward_extra_info,
+    }
+
+
 class VeRLServerModelRunner(AsyncTextModelRunner):
     """Async model runner backed by VeRL's LLM server manager."""
 
@@ -254,7 +263,7 @@ class DeepMathLiteAgentLoop:
             rollout,
             tokenizer,
             reward_score=reward_score,
-            extra_fields={"reward_extra_info": reward_extra_info},
+            extra_fields=build_reward_extra_fields(reward_extra_info),
             max_response_length=resolve_max_response_length(
                 sampling_params,
                 trainer_config=self.trainer_config,
@@ -284,7 +293,7 @@ def build_deepmath_agent_loop_class() -> type:
                 rollout,
                 tokenizer,
                 reward_score=reward_score,
-                extra_fields={"reward_extra_info": reward_extra_info},
+                extra_fields=build_reward_extra_fields(reward_extra_info),
                 max_response_length=resolve_max_response_length(
                     sampling_params,
                     trainer_config=getattr(self, "trainer_config", None),

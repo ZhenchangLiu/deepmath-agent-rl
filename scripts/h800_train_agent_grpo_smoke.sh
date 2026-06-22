@@ -13,6 +13,7 @@ VAL_SIZE=${VAL_SIZE:-4}
 LOG_VAL_GENERATIONS=${LOG_VAL_GENERATIONS:-${VAL_SIZE}}
 AGENT_LOOP_CONFIG=${AGENT_LOOP_CONFIG:-${ROOT_DIR}/configs/verl/deepmath_lite_agent_loop.yaml}
 REWARD_PATH=${REWARD_PATH:-${ROOT_DIR}/deepmath_lite/verl_reward.py}
+TRAIN_INSTRUCTION=${TRAIN_INSTRUCTION:-"You must use Python before giving the final answer. Your first response must be exactly one <python>...</python> block and must not include \\boxed{...}. After receiving the <observation>, continue solving and put the final answer in \\boxed{...}. Never use markdown code fences."}
 
 TRAIN_BATCH_SIZE=${TRAIN_BATCH_SIZE:-2}
 PPO_MINI_BATCH_SIZE=${PPO_MINI_BATCH_SIZE:-2}
@@ -78,6 +79,7 @@ PY
 python scripts/prepare_deepmath_verl.py \
     --limit "${DATA_LIMIT}" \
     --val-size "${VAL_SIZE}" \
+    --instruction "${TRAIN_INSTRUCTION}" \
     --output-dir "${DATA_DIR}"
 
 DATA=(

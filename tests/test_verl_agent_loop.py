@@ -6,6 +6,7 @@ from deepmath_lite.executor import ExecutionResult
 from deepmath_lite.verl_agent_loop import (
     VeRLPromptTokenizer,
     VeRLServerModelRunner,
+    build_reward_extra_fields,
     extract_ground_truth,
     resolve_max_response_length,
     score_agent_rollout,
@@ -133,6 +134,20 @@ class VerlAgentLoopAdapterTests(unittest.TestCase):
         self.assertEqual(info["format_reward"], 0.2)
         self.assertEqual(info["code_error_penalty"], 0.2)
         self.assertTrue(info["has_code_error"])
+
+    def test_reward_extra_fields_are_nested_and_flat(self):
+        fields = build_reward_extra_fields(
+            {
+                "score": 1.0,
+                "format_reward": 0.2,
+                "answer_reward": 0.8,
+                "code_error_penalty": 0.0,
+            }
+        )
+
+        self.assertEqual(fields["reward_extra_info"]["format_reward"], 0.2)
+        self.assertEqual(fields["format_reward"], 0.2)
+        self.assertEqual(fields["answer_reward"], 0.8)
 
     def test_extract_ground_truth_from_reward_model(self):
         self.assertEqual(extract_ground_truth({"reward_model": {"ground_truth": "42"}}), "42")
