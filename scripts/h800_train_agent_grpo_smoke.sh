@@ -101,7 +101,7 @@ MODEL=(
     actor_rollout_ref.model.path="${MODEL_PATH}"
     actor_rollout_ref.model.use_remove_padding=True
     actor_rollout_ref.model.enable_gradient_checkpointing=True
-    actor_rollout_ref.model.override_config._attn_implementation="${MODEL_ATTN_IMPLEMENTATION}"
+    +actor_rollout_ref.model.override_config._attn_implementation="${MODEL_ATTN_IMPLEMENTATION}"
 )
 
 ACTOR=(
