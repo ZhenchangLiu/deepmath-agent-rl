@@ -172,6 +172,16 @@ The script appends `VLLM_USE_V1` and `VLLM_LOGGING_LEVEL` through
 Ray actors and plain shell exports may not be visible in the server actor. The
 values are quoted so Hydra keeps them as strings for Ray's `runtime_env`.
 
+The script also defaults `MODEL_ATTN_IMPLEMENTATION=sdpa` and passes it to:
+
+```text
+actor_rollout_ref.model.override_config._attn_implementation
+```
+
+This avoids importing a host-incompatible `flash_attn` wheel during the
+Transformers/FSDP actor model load. If the H800 environment later has a
+compatible flash-attn build, override this variable intentionally.
+
 To switch the same path to 7B later:
 
 ```bash

@@ -40,6 +40,7 @@ EXPERIMENT_NAME=${EXPERIMENT_NAME:-agent_grpo_smoke_qwen25_1p5b}
 TRAINER_LOGGER=${TRAINER_LOGGER:-'["console"]'}
 TRAINER_MODULE=${TRAINER_MODULE:-deepmath_lite.verl_main_ppo_reward_metrics}
 VLLM_LOGGING_LEVEL=${VLLM_LOGGING_LEVEL:-INFO}
+MODEL_ATTN_IMPLEMENTATION=${MODEL_ATTN_IMPLEMENTATION:-sdpa}
 
 cd "${ROOT_DIR}"
 export PYTHONPATH="${ROOT_DIR}:${PYTHONPATH:-}"
@@ -100,6 +101,7 @@ MODEL=(
     actor_rollout_ref.model.path="${MODEL_PATH}"
     actor_rollout_ref.model.use_remove_padding=True
     actor_rollout_ref.model.enable_gradient_checkpointing=True
+    actor_rollout_ref.model.override_config._attn_implementation="${MODEL_ATTN_IMPLEMENTATION}"
 )
 
 ACTOR=(
